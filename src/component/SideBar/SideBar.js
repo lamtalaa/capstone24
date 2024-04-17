@@ -6,6 +6,7 @@ import appointmentIcon from '../../images/appointmentIcon.png';
 import SettingIcon from '../../images/SettingIcon.png';
 import SignOut from '../../images/SignOut.png';
 import Login from '../Login/Login';
+import Modal from '../Modal/Modal';
 
 import './SideBar.css';
 
@@ -41,6 +42,7 @@ function Sidebar({ setService }) {
     };
 
     const setServiceAndCloseMenu = (serviceName) => {
+
         setService(serviceName);
         setCurrentService(serviceName);
         setCollapsed(false);
@@ -114,37 +116,55 @@ function Sidebar({ setService }) {
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={() => setServiceAndCloseMenu('Overview')} className={`expanded-menu-button ${currentService === 'Overview' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={() => setServiceAndCloseMenu('Overview')} 
+                                        className={`expanded-menu-button ${currentService === 'Overview' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={homeIcon} alt="Home" />
                                             <span>Home</span>
                                         </div>
                                     </button>
-                                    <button onClick={() => setServiceAndCloseMenu('Customer Information Form')} className={`expanded-menu-button ${currentService === 'Customer Information Form' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={() => setServiceAndCloseMenu('Customer Information Form')} 
+                                        className={`expanded-menu-button ${currentService === 'Customer Information Form' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={customerInputIcon} alt="Customer Input" />
-                                            <span>Customer Input</span>
+                                            <span>Customer Form</span>
                                         </div>
                                     </button>
-                                    <button onClick={() => setServiceAndCloseMenu('Customer Information')} className={`expanded-menu-button ${currentService === 'Customer Information' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={() => setServiceAndCloseMenu('Customer Information')} 
+                                        className={`expanded-menu-button ${currentService === 'Customer Information' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={customerInfoIcon} alt="Customer Info" />
-                                            <span>Customer Info</span>
+                                            <span>Customer Search</span>
                                         </div>
                                     </button>
-                                    <button onClick={() => setServiceAndCloseMenu('Appointment')} className={`expanded-menu-button ${currentService === 'Appointment' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={() => setServiceAndCloseMenu('Appointment')} 
+                                        className={`expanded-menu-button ${currentService === 'Appointment' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={appointmentIcon} alt="Appointment" />
                                             <span>Appointment</span>
                                         </div>
                                     </button>
-                                    <button onClick={() => setServiceAndCloseMenu('Settings')} className={`expanded-menu-button ${currentService === 'Settings' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={() => setServiceAndCloseMenu('Settings')} 
+                                        className={`expanded-menu-button ${currentService === 'Settings' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={SettingIcon} alt="Settings" />
                                             <span>Setting</span>
                                         </div>
                                     </button>
-                                    <button onClick={handleLogout} className={`expanded-menu-button ${currentService === 'SignOut' ? 'active' : ''}`}>
+                                    <button 
+                                        onClick={handleLogout} 
+                                        className={`expanded-menu-button ${currentService === 'SignOut' ? 'active' : ''}`}
+                                    >
                                         <div className="button-content">
                                             <img src={SignOut} alt="SignOut" />
                                             <span>Sign Out</span>

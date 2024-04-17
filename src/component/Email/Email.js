@@ -1,5 +1,7 @@
+ 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '@supabase/auth-helpers-react';
+import { toast, ToastContainer } from 'react-toastify';
 
 function EmailSender({ Recipients, Subject, Body }) {
 
@@ -33,7 +35,6 @@ function EmailSender({ Recipients, Subject, Body }) {
             alert('Please login to send email.');
             return;
         }
-
         try {
             const emailData = {
                 raw: window.btoa(
@@ -43,7 +44,6 @@ function EmailSender({ Recipients, Subject, Body }) {
                     `${body}`
                 )
             };
-
             const response = await fetch(`https://www.googleapis.com/gmail/v1/users/${userId}/messages/send`, {
                 method: 'POST',
                 headers: {
@@ -52,15 +52,13 @@ function EmailSender({ Recipients, Subject, Body }) {
                 },
                 body: JSON.stringify(emailData)
             });
-
             if (!response.ok) {
                 throw new Error('Failed to send email');
             }
-
-            alert('Email sent successfully!');
+            toast.success(`Email sent successfully!`);
         } catch (error) {
             console.error('Error sending email:', error.message);
-            alert('Error sending email. Please try again later.');
+            toast.error(`Error sending email. Please try again later.`);
         }
     };
 
@@ -78,7 +76,7 @@ function EmailSender({ Recipients, Subject, Body }) {
     const handleBodyChange = (e) => {
         setBody(e.target.value);
     };
-
+    
     return (
         
         <div>
@@ -96,8 +94,11 @@ function EmailSender({ Recipients, Subject, Body }) {
                 <textarea id="body" value={body} onChange={handleBodyChange} />
             </div>
             <button onClick={sendEmail}>Send Email</button>
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }
-
 export default EmailSender;
+
+ 
+ 

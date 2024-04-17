@@ -139,7 +139,7 @@
     row-gap: 4px;
 }
 
-.rider-table-delete {
+.form-rider-table-delete {
 
     text-align: center;
     width: fit-content;
@@ -147,18 +147,18 @@
     border-collapse: collapse;
 }
 
-.rider-table-delete th {
+.form-rider-table-delete th {
 
     padding: 0 15px;
     border-bottom: 1px solid var(--theme-primary-5);
 }
 
-.rider-table-delete td {
+.form-rider-table-delete td {
 
     padding: 0 20px;
 }
 
-.rider-table {
+.form-rider-table {
 
     border: 2px solid var(--theme-primary-3);
     text-align: center;
@@ -167,22 +167,22 @@
     border-collapse: collapse;
 }
 
-.rider-table tr {
+.form-rider-table tr {
 
     border-bottom: 1px solid var(--theme-primary-4);
 }
 
-.rider-table th {
+.form-rider-table th {
 
     padding: 5px 0;
 }
 
-.rider-table td {
+.form-rider-table td {
 
     padding: 5px 0;
 }
 
-.rider-table input {
+.form-rider-table input {
 
     width: 80%;
 }

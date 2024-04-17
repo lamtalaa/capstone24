@@ -3,7 +3,7 @@ import useOutsideClick from '../../utility/handleOutsideClick/useOutsideClick';
 
 import './DropdownMenu.css'
 
-function DropdownMenu({ itemList=[''], htmlForRef=null, label='', callback=null }) {
+function DropdownMenu({ itemList=[''], htmlForRef=null, label='', value='', callback=null }) {
 
     const [isActive, setActive] = useState(false);
     const [content, setContent] = useState('');
@@ -11,10 +11,17 @@ function DropdownMenu({ itemList=[''], htmlForRef=null, label='', callback=null 
 
     // Initialize Dropdown Menu with first item
     useEffect(() => {
-        setContent(itemList[0]);
-    }, []);
+        if (value === '') {
+            setContent(itemList[0]);
+        } else  {
+            console.log("\t----vALUE: ", value);
+            setContent(value);
+            callback(value);
+        }
+    }, [value]);
 
-    const handleToggle = () => {
+    const handleToggle = (event) => {
+        event.preventDefault();
         setActive(!isActive);
     }
 
@@ -26,15 +33,15 @@ function DropdownMenu({ itemList=[''], htmlForRef=null, label='', callback=null 
     return (
 
         <span className="form-body-wrapper_flex-row">
-        <div ref={ ref } className="dropdownMenu-container" id={htmlForRef}>
-            <button className="dropdownMenu-button" onClick={handleToggle}>
+        <div ref={ref} className="dropdownMenu-container" id={htmlForRef}>
+            <button className="dropdownMenu-button" onClick={(event) => handleToggle(event)}>
                 <div className="dropdownMenu-button-content-wrapper">
                     <span>{ content }</span>
                     <span className="dropdownMenu-button-icon"></span>
                 </div>
             </button>
             <ul className={`dropdownMenu-content ${isActive ? 'active' : ''}`}>
-                { itemList.map((item, index) => (
+                {itemList.map((item, index) => (
                     <li onClick={() => handleContentChange(item)} key={index}>{item}</li>
                 ))}
             </ul>

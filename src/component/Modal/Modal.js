@@ -7,7 +7,7 @@ import './Modal.css';
 function Modal({ isActive, onCloseCallBack, direction=null, children }) {
 
     const [pointAt, setPointAt] = useState(null);
-    const [modalPosition, setModalPosition] = useState({ top: undefined, left: undefined});
+    const [modalPosition, setModalPosition] = useState({top: undefined, left: undefined});
     const ref = useRef();
 
     // Initialize direction to point at, if applicable
@@ -27,7 +27,12 @@ function Modal({ isActive, onCloseCallBack, direction=null, children }) {
             case '4':
                 setPointAt('left');
                 break;
-            default:
+            case '5':
+                setPointAt('center');
+                setModalPosition({ 
+                    top: window.innerHeight / 2, 
+                    left: window.innerWidth / 2
+                });
                 break;
         }
     }, []);
@@ -50,7 +55,6 @@ function Modal({ isActive, onCloseCallBack, direction=null, children }) {
                 left = (pointAt === 'right' ? parentRect.left : parentRect.right);
                 break;
         }
-
         setModalPosition({ top, left });
     }
 
@@ -58,7 +62,7 @@ function Modal({ isActive, onCloseCallBack, direction=null, children }) {
     useEffect(() => {
 
         if (isActive) {
-            if (direction) calculatePosition();
+            if (direction !== '5') {calculatePosition();}
             ref.current?.showModal();
         } else
             ref.current?.close();
@@ -69,10 +73,10 @@ function Modal({ isActive, onCloseCallBack, direction=null, children }) {
         <dialog 
             ref={ref}
             className={`modal-container ${pointAt ? 'pointing' : ''} ${pointAt}`}
-            style={{top: modalPosition.top, left: modalPosition.left}}
+            style={(modalPosition.top) ? modalPosition : {display: "none"}}
             onCancel={onCloseCallBack}
         >
-            {direction !== null  && <div className={`pointer ${pointAt}`}></div>}
+            {direction !== '5'  && <div className={`pointer ${pointAt}`}></div>}
             {children}
         </dialog>
     );

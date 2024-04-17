@@ -36,15 +36,3 @@
 
     display: block;
 }
-
-/*  Right vertical bar for visual uplift from background */
-.contact-content-wrapper > .form-body-wrapper_flex-column:after {
-
-    content: '';
-    background-color: var(--theme-primary-3);
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 3%;
-    height: 100%;
-}

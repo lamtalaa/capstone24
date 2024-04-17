@@ -7,6 +7,7 @@
     border: none;
     overflow: visible;
     border-radius: 8px;
+    position: fixed;
 }
 
 /* Positions self relative to object of interest */
@@ -28,6 +29,11 @@
 .modal-container.pointing.down {
 
     transform: translate(-50%, -115%);
+}
+
+.modal-container.pointing.center {
+
+    transform: translate(-50%, -50%);
 }
 
 /* Align content of pop up */

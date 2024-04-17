@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSession } from '@supabase/auth-helpers-react';
 import moment from 'moment';
-
+import { toast, ToastContainer } from 'react-toastify';
 import './GoogleCalendarEventCreate.css'; 
 
 function GoogleCalendarEvent({ selectedDate2, sunrise, sunset, parentTime, selectedLocation }) {
@@ -109,8 +109,10 @@ function GoogleCalendarEvent({ selectedDate2, sunrise, sunset, parentTime, selec
 
             const data = await response.json();
             console.log('Google Calendar event created successfully!', data);
+            toast.success(`Google Calendar event created successfully!`);
         } catch (error) {
             console.error('Error creating Google Calendar event:', error.message);
+            toast.error(`Error creating Google Calendar event.`);
         }
     }
 
@@ -129,6 +131,7 @@ function GoogleCalendarEvent({ selectedDate2, sunrise, sunset, parentTime, selec
             <button className="create-event-button" onMouseDown={handleButtonPress} onMouseUp={handleButtonRelease}>
                 Create Google Calendar Event
             </button>
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }

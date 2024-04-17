@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import CryptoJS from 'crypto-js';
+import { supabase } from '../../supabase';
+import ENC from '../Encryption/Encryption';
 
 import DropdownMenu from '../DropdownMenu/DropdownMenu';
 import ContactButton from '../AddContactsButton/AddContactsButton';
@@ -41,7 +44,7 @@ const Rider = (instanceId=Date.now(), name='', age='0', weight='0', mainPhone=''
     }
 }
 
-function Form() {
+function Form({ targetCustomer=-1 }) {
 
     // Customer
     const [customer, updateCustomer] = useState({
@@ -61,6 +64,12 @@ function Form() {
     const [customerIsRider, setCustomerAsRider] = useState(false);
     const [prefersAM, setPrefersAM] = useState(true);
     const [prefersShared, setPrefersShared] = useState(true);
+    const [disableDisplayName, setDisableDisplayName] = useState(false);
+    const [shippingAddressId, setShippingAddressId] = useState([]);
+    const [billingAddressId, setBillingAddressId] = useState([]);
+    const [riderPID, setRiderPID] = useState([]);
+    const [ridersUpdated, setRiderUpdated] = useState(false);
+    const [addressId, setaddressId] = useState('');
 
     // Customer error pop ups
     const [showErrorPopUp, setShowErrorPopUp] = useState(false);
@@ -71,6 +80,11 @@ function Form() {
     const [numOfRiders, setNumOfRiders] = useState(0);
     const [listOfRiders, appendRider] = useState([]);
     const [riderToDelete, setRiderToDelete] = useState([]);
+
+    // Populate fields if form is being used to update customer information
+    useEffect(() => {
+        if (targetCustomer !== -1) {populateFields();}
+    }, [])
 
     // (1 of 2) DEBUGGING: Print customer's values
     useEffect(() => {
@@ -117,8 +131,6 @@ function Form() {
             }
         }
         
-        console.log("NEW DISPLAY NAME: ", ref.displayName);
-
         // If display name is set to auto, use all other fields in "Full Name"
         // Otherwise, use the manually inputted display name
         if (autoDisplayName) {
@@ -188,7 +200,6 @@ function Form() {
     const handleDeleteRider = (event, idx) => {
         event.preventDefault();
         setRiderToDelete(idx);
-        console.log("RIDER TO DELETE: ", idx);
         setShowDeletePopUp(true);
     }
 
@@ -225,6 +236,7 @@ function Form() {
 
         const arr = [];
         for (let i = 0; i < numOfRiders; ++i) {
+            if (!listOfRiders[i]) {return;}
 
             const riderName = listOfRiders[i].name;
             const riderAge = listOfRiders[i].age === '0' ? '' : listOfRiders[i].age;
@@ -294,6 +306,7 @@ function Form() {
         console.log("\tNUM OF RIDERS: ", numOfRiders);
         console.log("\tRIDERS.......: ", ...listOfRiders);
         console.log("_______________________________________________\n\n");
+        if (targetCustomer !== -1) { setRiderUpdated(true); }
     }, [numOfRiders, listOfRiders, toUpdate]);
 
     // Update customer attributes
@@ -319,8 +332,6 @@ function Form() {
         if (customerIsRider && category > customerCategory.suffix && category <= customerCategory.fax) {
             for (let i = 0; i < numOfRiders; ++i) {
                 if(listOfRiders[i].instanceId === 0) {
-
-                    console.log("ACCESSING KEY - ", key);
                     listOfRiders[i][key] = event.target.value;
                     break;
                 }
@@ -332,7 +343,6 @@ function Form() {
     const handleRiderUpdate = (entryId, event, category) => {
 
         event.preventDefault();
-        console.log("VALUE:", event.target.value);
         const key = Object.keys(riderCategory).find(key => riderCategory[key] === category);
 
         switch (category) {
@@ -372,7 +382,7 @@ function Form() {
     const fixDecimal = (i, event) => {
         event.preventDefault();
 
-        if ((listOfRiders[i].weight).endsWith('.')) {
+        if (!isNaN(listOfRiders[i].weight) && (listOfRiders[i].weight).endsWith('.')) {
 
             listOfRiders[i].weight += '0';
             toggleUpdate(!toUpdate);
@@ -403,15 +413,580 @@ function Form() {
             setShowErrorPopUp(true);
             return;
         }
+  
+        // Function for Person table
 
-        // add try catch here upon database response (e.g., displayName already taken)
-        //
-        //////////////////////////////////////////////////////////////////////////////
+        try {
+            const { data: userData , error: userError } = await supabase.from('Person')
+            .insert([
+                {
+                    Main_Phone: customer.mainPhone,
+                    Work_Phone: customer.workPhone,
+                    Mobile_Phone: customer.mobilePhone,
+                    Email: customer.email,
+                    CC_Email: customer.CCEmail,
+                    Fax: customer.fax
+                }
+            ])
+            .select();
+
+            const personId = userData[0].Person_id;
+            console.log("USER DATA: ", userData)
+            //console.log('Newly created person ID:', personId);
+
+            if(userError) {
+                console.error('Error inserting data:', userError.message);
+            } else{
+                console.log('Person Data inserted successfully:', userData);
+            }
+
+            const { data: customerData, error:customerError } = await supabase.from('Customer').insert([
+                {
+                    Display_Name: customer.displayName,
+                    Title: customer.title,
+                    First_Name: customer.firstName,
+                    Middle_Name: customer.middleName,
+                    Last_Name: customer.lastName,
+                    Suffix: customer.suffix,
+                    PrefersAM: customer.prefersAM,
+                    PrefersPublic: customer.prefersShared,
+                    Notes: customer.notes,
+                    QuickBooks_id: customer.quickbooksId,
+                    WebOrder_id: customer.webOrderId,
+                    Person_id: personId // Use the obtained Person_id as foreign key
+                }
+            ]);
+
+            if (customerError) {
+                console.error('Error inserting data into Customer table:', customerError.message);
+            } else {
+                console.log('Customer Data inserted successfully into Customer table:', customerData);
+            }
+
+            const { data: addressData, error: addressError } = await supabase.from('Address').insert([
+                {
+                    Street_Address: customer.s_streetAddress,
+                    City: customer.s_city,
+                    State: customer.s_state,
+                    Zip_Code: customer.s_zipCode
+                }
+            ])
+            .select();
+
+            const addressId = addressData[0].Address_id; // address id
+            setaddressId(addressId);
+            console.log("ADDRESS: ", addressId)
+
+            if(addressError) {
+                console.error('Error inserting data:', addressError.message);
+            } else{
+                console.log('Address Data inserted successfully:', addressData);
+            }
+
+            const { data: personAddressData, error: personAddressError } = await supabase.from('PersonAddress').insert([
+                {
+                    Person_id: personId,
+                    Address_id: addressId,
+                    Type: 'Shipping'
+                }
+            ]);
+            
+            if(personAddressError) {
+                console.error('Error inserting data:', personAddressError.message);
+            } else{
+                console.log('Address Data inserted successfully:', personAddressData);
+            }
+
+            if (isSameAddress) {
+                const { data: personAddressData, error: personAddressError } = await supabase.from('PersonAddress').insert([
+                    {
+                        Person_id: personId,
+                        Address_id: addressId, // Assuming you have already obtained the ID of the shipping address
+                        Type: 'Billing'
+                    }
+                ]);
+
+                if(personAddressError) {
+                    console.error('Error inserting data:', personAddressError.message);
+                } else{
+                    console.log('AutoBilling Address Data inserted successfully:', personAddressData);
+                }
+            } else {
+                const { data: billingAddressData, error: billingAddressError } = await supabase.from('Address').insert([
+                    {
+                        Street_Address: customer.b_streetAddress,
+                        City: customer.b_city,
+                        State: customer.b_state,
+                        Zip_Code: customer.b_zipCode
+                    }
+                ]);
+
+                if(billingAddressError) {
+                    console.error('Error inserting data:', billingAddressError.message);
+                } else{
+                    console.log('Billing Data inserted successfully:', billingAddressData);
+                }
+            }
+            
+
+            
+            for (let i = 0; i < numOfRiders; ++i) {
+                const rider = listOfRiders[i];
+            
+                // Extract rider properties
+                const instanceId = rider.instanceId;
+                const name = rider.name;
+                const age = rider.age;
+                const weight = rider.weight;
+                const mainPhone = rider.mainPhone;
+                const workPhone = rider.workPhone;
+                const mobilePhone = rider.mobilePhone;
+                const email = rider.email;
+                const CCEmail = rider.CCEmail;
+                const fax = rider.fax;
+
+                if (instanceId === 0) { // This is the customer as a rider
+                    // Insert rider data into Rider table using the customer's Person_id
+                    const { data: riderData, error: riderError } = await supabase.from('Rider').insert([
+                        {
+                            Person_id: personId,
+                            Name: name,
+                            Age: age,
+                            Weight: weight,
+                            Parent_Display_Name: customer.displayName
+                        }
+                    ]);
+                    if (riderError) {
+                        console.error('Error inserting data into Rider table:', riderError.message);
+                    } else {
+                        console.log('customer as rider data inserted successfully:', riderData);
+                    }
+                } else { // For all other riders
+                    // Insert rider data into Person table
+                    const { data: personData, error: personError } = await supabase.from('Person').insert([
+                        {
+                            Main_Phone: mainPhone,
+                            Work_Phone: workPhone,
+                            Mobile_Phone: mobilePhone,
+                            Email: email,
+                            CC_Email: CCEmail,
+                            Fax: fax
+                        }
+                    ])
+                    .select();
+
+                    const riderPersonId = personData[0].Person_id;
+                    console.log("USER DATA: ", addressData)
+
+                    if (personError) {
+                        console.error('Error inserting data into Rider table:', personError.message);
+                    } else {
+                        console.log('customer as rider data inserted successfully:', personData);
+                    }
+
+                    const { data: riderData, error: riderError } = await supabase.from('Rider').insert([
+                        {
+                            Person_id: riderPersonId,
+                            Name: name,
+                            Age: age,
+                            Weight: weight,
+                            Parent_Display_Name: customer.displayName
+                        }
+                    ]);
+
+                    if (riderError) {
+                        console.error('Error inserting data into Rider table:', riderError.message);
+                    } else {
+                        console.log('rider data inserted successfully:', riderData);
+                    }
+                }
+            }
+            
+        window.location.reload();
+        } catch (error) {
+            console.error('Error submitting form', error.message);
+        }
+    }
+
+    const populateCustomer = async () => {
+
+        try {
+            // Get customer record
+            const { data, error } = await supabase
+            .from("Customer")
+            .select()
+            .eq('Person_id', targetCustomer['Person_id'])
+            .limit(1);
+
+            if (error) {
+                throw error;
+            }
+
+            const c = data[0];
+
+            // Check if display name matches full name
+            /*const fullName = ((c['Title'] ? c['Title'] + ' ' : '')
+                              + (c['First_Name'] ? c['First_Name'] + ' ' : '')
+                              + (c['Middle_Name'] ? c['Middle_Name'] + ' ' : '')
+                              + (c['Last_Name'] ? c['Last_Name'] + ' ' : '')
+                              + (c['Suffix'] ? c['Suffix'] : '')).trim();*/
+
+            //setAutoDisplayName(c['Display_Name'] === fullName ? true : false);
+            setAutoDisplayName(false);
+            setDisableDisplayName(true);
+            
+            // Update customer
+            updateCustomer(prevState => ({
+                ...prevState,
+                title: c['Title'], firstName: c['First_Name'], middleName: c['Middle_Name'], 
+                lastName: c['Last_Name'], suffix: c['Suffix'], displayName: c['Display_Name'], 
+                webOrderId: c['WebOrder_id'], quickbooksId: c['QuickBooks_id'], notes: c['Notes']
+            }));
+            setPrefersAM(c['PrefersAM']);
+            setPrefersShared(c['PrefersPublic']);
+
+
+        } catch (error) {
+            console.error('Error Populating Customer Fields:', error.message);
+        }
+    }
+
+    const populateContacts = async () => {
+
+        try {
+            // Get customer record
+            const { data, error } = await supabase
+            .from("Person")
+            .select()
+            .eq('Person_id', targetCustomer['Person_id'])
+            .limit(1);
+
+            if (error) {
+                throw error;
+            }
+
+            const c = data[0];
+            
+            // Update customer's contacts
+            updateCustomer(prevState => ({
+                ...prevState,
+                mainPhone: c['Main_Phone'], workPhone: c['Work_Phone'], 
+                mobilePhone: c['Mobile_Phone'], email: c['Email'], 
+                CCEmail: c['CC_Email'], fax: c['Fax'],
+            }));
+
+        } catch (error) {
+            console.error('Error Populating Contact Fields:', error.message);
+        }
+    }
+
+    // Get shipping and billing addresses
+    const populateAddress = async () => {
+
+        try {
+            // Get customer record
+            const { data: bothAddressData, error } = await supabase
+            .from("PersonAddress")
+            .select()
+            .eq('Person_id', targetCustomer['Person_id']);
+
+            if (error) {
+                throw error;
+            }
+
+            const c = bothAddressData;
+            const shippingExists = c[0] ? true : false;
+            const billingExists = c[1] ? true : false;
+
+            const isShipping = c[0]['Type'] === 'Shipping';
+            let shippingAddress_id = -1;
+            let billingAddress_id = -2;
+            if (shippingExists && billingExists) {
+                shippingAddress_id = isShipping ? c[0]['Address_id'] : c[1]['Address_id'];
+                billingAddress_id = (!isShipping && c[1]) ? c[0]['Address_id'] : c[1]['Address_id'];
+            } else {
+                shippingAddress_id = c[0]['Address_id'];
+            }
+
+            setShippingAddressId(shippingAddress_id);
+            setBillingAddressId(billingAddress_id);
+
+            if (shippingAddress_id === billingAddress_id)
+                setIsSameAddress(true);
+
+            const { data: s_addressData, s_addressError } = await supabase
+            .from("Address")
+            .select()
+            .eq('Address_id', shippingAddress_id);
+
+            if (s_addressError) {
+                throw s_addressError;
+            }
+
+            // Update customer's addresses
+            updateCustomer(prevState => ({
+                ...prevState,
+                s_streetAddress: s_addressData[0]['Street_Address'], s_city: s_addressData[0]['City'], 
+                s_state: s_addressData[0]['State'], s_zipCode: s_addressData[0]['Zip_Code'],               
+            }));
+
+            if (billingAddress_id !== -2) {
+                const { data: b_addressData, b_addressError } = await supabase
+                .from("Address")
+                .select()
+                .eq('Address_id', billingAddress_id);
+
+                if (b_addressError) {
+                    throw b_addressError;
+                }
+
+                updateCustomer(prevState => ({
+                    ...prevState,            
+                    b_streetAddress: b_addressData[0]['Street_Address'], b_city: b_addressData[0]['City'], 
+                    b_state: b_addressData[0]['State'], b_zipCode: b_addressData[0]['Zip_Code'],  
+                }));
+
+                if (s_addressError || b_addressError) {
+                    throw s_addressError ? s_addressError : b_addressError;
+                }
+            }
+        } catch (error) {
+            console.error('Error Populating Address Fields:', error.message);
+        }
+    }
+
+    const populateRiders = async () => {
+
+        try {
+            const { data, error } = await supabase
+            .from("Rider")
+            .select()
+            .eq('Parent_Display_Name', targetCustomer['Display_Name']);
+
+            if (error) {
+                throw error;
+            }
+
+            setNumOfRiders(data.length);
+            for (let i = 0; i < data.length; ++i) {
+                const r = data[i];
+                setRiderPID(riderPID => [...riderPID, r['Person_id']]);
+
+                // Also get riders' contacts
+                const { data: contactData, contactError } = await supabase
+                .from("Person")
+                .select()
+                .eq('Person_id', r['Person_id']);
+
+                if (contactError) {
+                    throw contactError;
+                }
+
+                const c = contactData[0];
+
+                appendRider(listOfRiders => [...listOfRiders, Rider(Date.now(), r['Name'], r['Age'], r['Weight'], 
+                        c['Main_Phone'], c['Work_Phone'], c['Mobile_Phone'], 
+                        c['Email'], c['CC_Email'], c['Fax'])]);
+            }
+        } catch (error) {
+            console.error('Error Populating Rider Entries:', error.message);
+        }
+    }
+
+    // If given a customer from an external source, populate the fields and change to update buttons
+    const populateFields = () => {
+
+        populateCustomer();
+        populateContacts();
+        populateAddress();
+        populateRiders();
+    }
+
+    // Update customer info
+    const updateCustomerInfo = async () => {
+
+        try {
+            const { error } = await supabase
+            .from("Customer")
+            .update({
+                Title: customer.title,
+                First_Name: customer.firstName,
+                Middle_Name: customer.middleName,
+                Last_Name: customer.lastName,
+                Suffix: customer.suffix,
+                PrefersAM: customer.prefersAM,
+                PrefersPublic: customer.prefersShared,
+                Notes: customer.notes,
+                QuickBooks_id: customer.quickbooksId,
+                WebOrder_id: customer.webOrderId
+            })
+            .eq('Person_id', targetCustomer['Person_id']);
+
+            if (error) {
+                throw error;
+            }
+
+        } catch (error) {
+            console.error('Error Updating Customer Info:', error.message);
+        }
+    }
+
+    // Update customer's contact
+    const updateContact = async () => {
+
+        try {
+            const { error } = await supabase
+            .from("Person")
+            .update({
+                Main_Phone: customer.mainPhone,
+                Work_Phone: customer.workPhone,
+                Mobile_Phone: customer.mobilePhone,
+                Email: customer.email,
+                CC_Email: customer.CCEmail,
+                Fax: customer.fax
+            })
+            .eq('Person_id', targetCustomer['Person_id']);
+
+            if (error) {
+                throw error;
+            }
+
+        } catch (error) {
+            console.error("Error Updating Customer's Contacts:", error.message);
+        }
+    }
+
+    // Update customer's address
+    const updateAddress = async () => {
+
+        try {
+            const { s_error } = await supabase
+            .from("Address")
+            .update({
+                Street_Address: customer.s_streetAddress,
+                City: customer.s_city,
+                State: customer.s_state,
+                Zip_Code: customer.s_zipCode,
+            })
+            .eq('Address_id', shippingAddressId);
+
+            if (s_error) {
+                throw s_error;
+            }
+
+            if (!isSameAddress) {
+                const { b_error } = await supabase
+                .from("Address")
+                .update({
+                    Street_Address: customer.b_streetAddress,
+                    City: customer.b_city,
+                    State: customer.b_state,
+                    Zip_Code: customer.b_zipCode,
+                })
+                .eq('Address_id', billingAddressId);
+
+                if (b_error) {
+                    throw b_error;
+                }
+            }
+
+        } catch (error) {
+            console.error("Error Updating Customer's Addresses:", error.message);
+        }
+    }
+
+    // Update customer's riders; either update existing
+    const updateCustomerRiders = async () => {
+
+        if (!ridersUpdated) {return;}
+        for (let i = 0; i < numOfRiders; ++i) {
+            try {
+                if (riderPID[i]) {
+                    const { r_error } = await supabase
+                    .from("Rider")
+                    .update({
+                        Name: listOfRiders[i].name,
+                        Age: listOfRiders[i].age,
+                        Weight: listOfRiders[i].weight,
+                    })
+                    .eq('Person_id', riderPID[i]);
+
+                    if (r_error) {
+                        throw r_error;
+                    }
+
+                    const { p_error } = await supabase
+                    .from("Person")
+                    .update({
+                        Main_Phone: listOfRiders[i].mainPhone,
+                        Work_Phone: listOfRiders[i].workPhone,
+                        Mobile_Phone: listOfRiders[i].mobilePhone,
+                        Email: listOfRiders[i].email,
+                        CC_Email: listOfRiders[i].CCEmail,
+                        Fax: listOfRiders[i].fax
+                    })
+                    .eq('Person_id', riderPID[i]);
+
+                    if (p_error) {
+                        throw p_error;
+                    }
+                } else { // Insert new rider
+                    const riderIsCustomer = listOfRiders[i].instanceId === 0;
+
+                    let data;
+                    if (!riderIsCustomer) {
+                        const { data: d, p_error } = await supabase
+                        .from("Person")
+                        .insert({
+                            Main_Phone: listOfRiders[i].mainPhone,
+                            Work_Phone: listOfRiders[i].workPhone,
+                            Mobile_Phone: listOfRiders[i].mobilePhone,
+                            Email: listOfRiders[i].email,
+                            CC_Email: listOfRiders[i].CCEmail,
+                            Fax: listOfRiders[i].fax
+                        })
+                        .select()
+
+                        if (p_error) {
+                            throw p_error;
+                        }
+                        data = d;
+                    }
+
+                    const { r_error } = await supabase
+                    .from("Rider")
+                    .insert({
+                        Person_id: riderIsCustomer ? targetCustomer['Person_id'] : data[0]['Person_id'],
+                        Name: listOfRiders[i].name,
+                        Age: listOfRiders[i].age,
+                        Weight: listOfRiders[i].weight,
+                        Parent_Display_Name: customer.displayName
+                    })
+
+                    if (r_error) {
+                        throw r_error;
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error Updating Rider Info:", error.message);
+            }
+        }
+    }
+
+    // Handle update customer information upon user confirmation
+    const handleUpdate = (event) => {
+        event.preventDefault();
+
+        updateContact();
+        updateCustomerInfo();
+        updateAddress();
+        //updateCustomerRiders();
     }
 
     return (
 
-            <form className="form-container" onSubmit={handleSubmit}>
+            <form className="form-container" onSubmit={(targetCustomer !== -1) ? handleUpdate : handleSubmit}>
                 <div ref={ref} className="form-main-content">
                     
                     {/* Add additional form sections */}
@@ -474,7 +1049,9 @@ function Form() {
                                             className="form-checkbox" 
                                             id="display-name-toggle" 
                                             type="checkbox" 
+                                            checked={!autoDisplayName}
                                             onChange={handleDisplayNameToggle}
+                                            disabled={disableDisplayName}
                                         />
                                         <label className="form-checkbox-text" htmlFor="display-name-toggle">Override Display Name</label>
                                         <Modal 
@@ -485,9 +1062,10 @@ function Form() {
                                             <h2>Customer Display Name</h2>
                                             <p>Display name is required and must not be used by another customer.</p>
                                             <div className='modal-buttons'>
-                                                <button className='option-button' 
-                                                        onClick={(event) => {event.preventDefault(); setShowErrorPopUp(false);}}>
-                                                            Close
+                                                <button 
+                                                    className='option-button' 
+                                                    onClick={(event) => {event.preventDefault(); setShowErrorPopUp(false);}}>
+                                                        Close
                                                 </button>
                                             </div>
                                         </Modal>
@@ -498,7 +1076,7 @@ function Form() {
                                             type="text"
                                             value={customer.displayName}
                                             onChange={event => handleCustomerUpdate(event, customerCategory.displayName)}
-                                            disabled={autoDisplayName}
+                                            disabled={autoDisplayName || disableDisplayName}
                                         />
                                     </div>
                                 </div>
@@ -704,7 +1282,7 @@ function Form() {
                                         Add customer as a rider too
                                 </label>
                             </span>
-                            <table className="rider-table">
+                            <table className="form-rider-table">
                                 <thead>
                                     <tr>
                                         <th scope="col" width="6%">#</th>
@@ -736,6 +1314,7 @@ function Form() {
                                                 itemList={["AM", "PM"]} 
                                                 htmlForRef="am-toggle" 
                                                 label="AM/PM" 
+                                                value={prefersAM ? "AM" : "PM"}
                                                 callback={(value) => setPrefersAM(value === "AM")} 
                                             />
                                         </span>
@@ -743,7 +1322,8 @@ function Form() {
                                                 itemList={["Shared", "Private"]} 
                                                 htmlForRef="public-toggle" 
                                                 label="Shared/Private" 
-                                                callback={(value) => setPrefersShared(value === "Shared")}
+                                                value={prefersShared ? "Shared" : "Private"}
+                                                callback={(v) => setPrefersShared(v === "Shared")}
                                             />
                                         </div>
                                     </div>
@@ -782,8 +1362,13 @@ function Form() {
                 </div>
                 
                 <div className="form-buttons">
-                    <button type="submit" className="submit-button">Create Customer</button>
+                    <button 
+                        type="submit" 
+                        className="submit-button">
+                            {(targetCustomer !== -1) ? "Update Customer" : "Create Customer"}
+                    </button>
                 </div>
+                <ENC addressId = {addressId}/>
             </form>
     )
 }
