@@ -13,7 +13,7 @@ function GoogleCalendarEvent({ selectedDate2, sunrise, sunset, parentTime, selec
     const wasButtonPreviouslyPressed = useRef(false);
     const [selectedCalendar, setSelectedCalendar] = useState('primary');
     const [calendars, setCalendars] = useState([]);
-    const meetingTime = parentTime === 'AM' ? sunriseMoment : sunsetMoment;
+    const meetingTime = parentTime === 'AM' ? sunriseMoment.clone().subtract(15, 'minutes') : sunsetMoment.clone().subtract(2, 'hours').subtract(15, 'minutes');
     const date = selectedDate2.format('YYYY-MM-DD');
     const formattedMeetingTime = meetingTime.format('HH:mm:ss');
 
