@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from '@supabase/auth-helpers-react';
 import { toast, ToastContainer } from 'react-toastify';
+import './Email.css'
 
 function EmailSender({ Recipients, Subject, Body }) {
 
@@ -93,7 +94,9 @@ function EmailSender({ Recipients, Subject, Body }) {
             <label htmlFor="body">Body:</label>
                 <textarea id="body" value={body} onChange={handleBodyChange} />
             </div>
+            <div className="Email-button">
             <button onClick={sendEmail}>Send Email</button>
+            </div>
             <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
