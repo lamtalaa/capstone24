@@ -274,7 +274,7 @@ function YourComponent({ selectedDate2, sunrise, sunset, selectedLocation, onTim
     const handleSubmit = async () => {
 
         try {
-            const meetingTime = time === 'AM' ? sunriseMoment : sunsetMoment;
+            const meetingTime = time === 'AM' ? sunriseMoment.clone().subtract(15, 'minutes') : sunsetMoment.clone().subtract(2, 'hours').subtract(15, 'minutes');
             const isAM = time === 'AM';
             const isPublic = visibility === 'Public';
             const date = selectedDate2.format('YYYY-MM-DD');
